@@ -1,0 +1,116 @@
+<project name="hello" default="deploy_local" basedir=".">
+<!--<project name="system" default="autodeploy-create" basedir=".">-->
+
+	<property file="build.properties" />
+
+	<path id="classpath">
+		<fileset dir="${lib.dir}" includes="servlet-api.jar" />
+	</path>
+
+	<target name="clean">
+		<echo>Cleaning the ${build.dir}</echo>
+		<delete dir="${build.dir}" />
+		<delete dir="${dist.dir}" />
+	</target>
+
+	<target name="init" depends="clean">
+		<echo>Creating the build directory</echo>
+		<mkdir dir="${build.dir}/WEB-INF/classes" />
+		<mkdir dir="${build.dir}/WEB-INF/lib" />
+		<mkdir dir="${build.dir}/META-INF" />
+		<mkdir dir="${dist.dir}" />
+	</target>
+	<target name="class-gen">
+		<echo>Compile the source files</echo>
+		<javac srcdir="${src.dir}">
+			<classpath refid="classpath" />
+		</javac>
+
+	</target>
+	<!--
+	<target name="compile" depends="init">
+		<echo>Compile the source files</echo>
+		
+		<javac srcdir="${src.dir}" destdir="${build.dir}/WEB-INF/classes">
+			<classpath refid="classpath" />
+		</javac>
+		
+	</target> 
+-->
+
+	<target name="compile" depends="init">
+		<echo>Compile the source files</echo>
+		<jar jarfile="${build.dir}/lib/controller.jar">
+			<fileset dir="${src.dir}">
+				<include name="com/pe/system/controller/*.class"/>
+			</fileset>
+		</jar>
+	</target>
+
+	<target name="copy" depends="compile">
+		<copy todir="${build.dir}/WEB-INF">
+			<fileset dir="${webapp.dir}/WEB-INF" />
+		</copy>
+		<copy todir="${build.dir}/META-INF">
+			<fileset dir="${webapp.dir}/META-INF" />
+		</copy>
+		<copy todir="${build.dir}">
+			<fileset dir="${webapp.dir}" />
+		</copy>
+		<copy todir="${build.dir}/lib">
+			<fileset dir="${lib.dir}">
+				<exclude name="servlet-api.jar" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="war" depends="copy">
+		<echo>Building the war file</echo>
+		<jar jarfile="${build.dir}/system.war" basedir="${webapp.dir}">
+			<include name="**/*.jsp"/>
+			<include name="WEB-INF/*.xml"/>
+			<include name="css/*"/>
+			<include name="js/*"/>
+			<include name="fonts/*"/>
+			<include name="jsp/*.jsp"/>
+		</jar>
+	</target>
+
+	<target name="ear-gen" depends="war">
+		<echo>Building the ear file</echo>
+		<jar jarfile="${dist.dir}/${project.name}.ear" >
+			<fileset dir="${build.dir}">
+				<include name="system.war"/>
+				<include name="lib/controller.jar"/>
+			</fileset>
+			<fileset dir="${webapp.dir}">
+				<include name="META-INF/*.xml"/>
+			</fileset>
+		</jar>
+	</target>
+
+	<target name="deploy_local" depends="ear-gen">
+		<echo>Deploying .war to WebLogic</echo>
+		<copy todir="${tomcat.dir}">
+			<fileset dir="${dist.dir}">
+				<include name="${project.name}.ear" />
+			</fileset>
+		</copy>
+	</target>
+
+	<!-- autodeploy -->
+	<target name="autodeploy-create" depends="autodeploy-delete, ear-gen, deploy_local">
+		<copy file="${dist.dir}/${project.name}.ear" todir="${autodeploy.dir}" />
+	</target>
+
+	<!-- autodeploy delete -->
+	<target name="autodeploy-delete">
+		<delete>
+			<fileset dir="${autodeploy.dir}">
+				<include name="${project.name}.ear"/>
+			</fileset>
+		</delete>
+	</target>
+
+
+</project>
